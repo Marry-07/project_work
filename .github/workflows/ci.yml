@@ -1,0 +1,40 @@
+name: CI for Booking Project
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # FRONTEND BUILD
+      - name: Build frontend Docker image
+        run: |
+          docker build -t booking-frontend ./frontend
+
+      # BACKEND BUILD
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r backend/requirements.txt
+
+      - name: Test backend syntax
+        run: |
+          python -m py_compile backend/app.py
+
+      - name: Build backend Docker image
+        run: |
+          docker build -t booking-backend ./backend
+
+      - name: CI completed
+        run: echo "CI pipeline finished successfully!"

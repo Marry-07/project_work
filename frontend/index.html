@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Booking</title>
+</head>
+<body>
+
+  <style>
+    h1 {
+      text-align: center;
+      font-size: 50px;
+      margin-bottom: 70px;
+    }
+    form {
+      text-align: center;
+    }
+    input {
+      height: 25px;
+      border: 1px solid black;
+      margin-bottom: 13px;
+    }
+    input::placeholder {
+      color: grey;
+    }
+    select {
+      height: 25px;
+      border: 1px solid black;
+      width: 170px;
+    }
+    button {
+      padding: 7px 20px;
+      margin-top: 20px;
+    }
+  </style>
+
+
+  <h1>Booking form</h1>
+  <form id="bookForm">
+    <input name="name" placeholder="Your name" required><br>
+    <input name="email" placeholder="Email" required><br>
+
+    <select name="service">
+      <option value="Tour">Tour</option>
+      <option value="Hotel">Hotel</option>
+      <option value="Apartment">Apartment</option>
+      <option value="flight">flight</option>
+    </select><br>
+
+    <button type="submit">Book</button>
+
+  </form>
+
+  <div id="result"></div>
+
+<script>
+
+document.getElementById('bookForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const fd = new FormData(event.target); //сбор всех данных из формы
+  const body = { // объект, хранящий нужные поля. Этот объект будет превращён в JSON для отправки на сервер.
+    name: fd.get('name'), 
+    email: fd.get('email'), 
+    service: fd.get('service') 
+  };
+
+  const res = await fetch('/api/bookings', { // делаем HTTP запрос
+    method: 'POST',
+    headers: {'Content-Type':'application/json'}, // указываем заголовок, что тело запроса — JSON.
+    body: JSON.stringify(body) // превращаем JS-объект body в JSON-строку для передачи.
+  });
+
+  //fetch(...) - сервер возвращает ответ.
+  // В этом ответе есть тело — данные, которые сервер прислал.
+  // Но тело приходит в виде сырого текста, не в виде объекта.
+  // res.json() — превращает этот сырой текст в объект
+  const data = await res.json();
+
+  document.getElementById('result').innerText = JSON.stringify(data); //DOM-элемент, где отображаем результат
+  // превращаем объект data в строку JSON и записываем как текст в элемент. Визуально получится однострочный JSON
+
+  setTimeout(() => location.reload(), 5000);
+});
+
+</script>
+</body>
+</html>
