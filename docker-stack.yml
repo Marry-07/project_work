@@ -17,7 +17,7 @@ services:
 
   web:
     # backend service (Flask)
-    image: ghcr.io/Marry-07/booking-backend:latest
+    image: ghcr.io/marry-07/booking-backend:latest
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@db:5432/tourdb}
     ports:
@@ -35,7 +35,7 @@ services:
         condition: on-failure
 
   frontend:
-    image: ghcr.io/Marry-07/booking-frontend:latest
+    image: ghcr.io/marry-07/booking-frontend:latest
     ports:
       - target: 80
         published: 80
