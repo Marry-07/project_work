@@ -22,9 +22,6 @@ services:
       - booking_network
     env_file:
       - ./db/.env
-    depends_on:
-      db:
-        condition: service_healthy
     deploy:
       restart_policy:
         condition: on-failure
