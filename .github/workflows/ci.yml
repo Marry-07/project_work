@@ -1,40 +1,120 @@
-name: CI for Booking Project
+# name: CI for Booking Project
 
+# on: #когда будет работать тест? (при пуше, ветка main и после проверки кода - PR)
+#   push:
+#     branches: [ "main" ]
+#     pull_request:
+
+# jobs:
+#   build-and-test:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#         # копирует репозиторий в виртуальную машину, чтобы дальше работать с кодом
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       # создается образ фронта
+#       - name: Build frontend Docker image
+#         run: |
+#           docker build -t booking-frontend ./frontend
+
+#       # установка питона
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.10"
+
+#         # цстановка библиотек и всех зависимостей
+#       - name: Install backend dependencies
+#         run: |
+#           pip install -r backend/requirements.txt
+
+#       # компилирует файл питона в байт-код, чтобы проверить синтаксис
+#       - name: Test backend syntax
+#         run: |
+#           python -m py_compile backend/app.py
+
+#         # образ бека
+#       - name: Build backend Docker image
+#         run: |
+#           docker build -t booking-backend ./backend
+
+#         # завершение CI - визуально
+#       - name: CI completed
+#         run: echo "CI pipeline finished successfully!"
+
+
+
+name: CI/CD (GHCR -> local Docker Swarm)
+
+# Запуск при пуше в ветку main (можешь изменить)
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
+    branches: ["main"]
+
+# Разрешаем workflow пушить пакеты (GHCR)
+permissions:
+  contents: read
+  packages: write
+
+env:
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/tour-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/tour-frontend
+  STACK_NAME: tourapp
+  STACK_FILE: docker-stack.yml
 
 jobs:
-  build-and-test:
+  # --- CI: собираем и пушим образы в GHCR (в облаке, ubuntu-latest) ---
+  build-and-push:
+    name: Build & Push images to GHCR
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # FRONTEND BUILD
-      - name: Build frontend Docker image
-        run: |
-          docker build -t booking-frontend ./frontend
-
-      # BACKEND BUILD
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          python-version: "3.10"
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install backend dependencies
+      - name: Build backend image
         run: |
-          pip install -r backend/requirements.txt
+          docker build -t $BACKEND_IMAGE:latest ./backend
+          docker push $BACKEND_IMAGE:latest
 
-      - name: Test backend syntax
+      - name: Build frontend image
         run: |
-          python -m py_compile backend/app.py
+          docker build -t $FRONTEND_IMAGE:latest ./frontend
+          docker push $FRONTEND_IMAGE:latest
 
-      - name: Build backend Docker image
+  # --- CD: деплой выполняется на self-hosted runner (твой локальный ПК) ---
+  deploy:
+    name: Deploy to local Docker Swarm (self-hosted runner)
+    needs: build-and-push
+    runs-on: [self-hosted, local]
+    # > runs-on использует label 'local' — при регистрации runner назначь ему label local
+    steps:
+      - name: Checkout repository (needed for stack file)
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR on the runner
         run: |
-          docker build -t booking-backend ./backend
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
 
-      - name: CI completed
-        run: echo "CI pipeline finished successfully!"
+      - name: Pull latest images on the runner
+        run: |
+          docker pull $BACKEND_IMAGE:latest
+          docker pull $FRONTEND_IMAGE:latest
+
+      - name: Deploy stack to local swarm
+        run: |
+          # deploy uses docker-stack file from the repository root
+          docker stack deploy -c $STACK_FILE $STACK_NAME
+
+      - name: Show stack services (for logs/verification)
+        run: |
+          docker stack services $STACK_NAME --no-trunc || true
+          docker service ls --filter name=${STACK_NAME}_ || true
