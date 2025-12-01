@@ -1,51 +1,3 @@
-# name: CI for Booking Project
-
-# on: #когда будет работать тест? (при пуше, ветка main и после проверки кода - PR)
-#   push:
-#     branches: [ "main" ]
-#     pull_request:
-
-# jobs:
-#   build-and-test:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#         # копирует репозиторий в виртуальную машину, чтобы дальше работать с кодом
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
-
-#       # создается образ фронта
-#       - name: Build frontend Docker image
-#         run: |
-#           docker build -t booking-frontend ./frontend
-
-#       # установка питона
-#       - name: Set up Python
-#         uses: actions/setup-python@v4
-#         with:
-#           python-version: "3.10"
-
-#         # цстановка библиотек и всех зависимостей
-#       - name: Install backend dependencies
-#         run: |
-#           pip install -r backend/requirements.txt
-
-#       # компилирует файл питона в байт-код, чтобы проверить синтаксис
-#       - name: Test backend syntax
-#         run: |
-#           python -m py_compile backend/app.py
-
-#         # образ бека
-#       - name: Build backend Docker image
-#         run: |
-#           docker build -t booking-backend ./backend
-
-#         # завершение CI - визуально
-#       - name: CI completed
-#         run: echo "CI pipeline finished successfully!"
-
-
-
 name: CI/CD
 
 on:
@@ -54,8 +6,8 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
-    runs-on: [self-hosted, local]  # твой локальный runner
+  build:
+    runs-on: [self-hosted, local]
     steps:
      
       - name: Checkout repository
