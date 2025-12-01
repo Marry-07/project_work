@@ -67,7 +67,7 @@ jobs:
         with:
           registry: ghcr.io
           username: marry-07
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ env.GHCR_PAT }}
 
      
       - name: Build backend image
