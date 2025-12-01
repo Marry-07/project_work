@@ -89,4 +89,3 @@ jobs:
       - name: Deploy stack to local Swarm
         run: |
           docker stack deploy -c docker-stack.yml tourapp
- 
