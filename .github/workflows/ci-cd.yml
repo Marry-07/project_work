@@ -78,8 +78,3 @@ jobs:
       - name: Build frontend image
         run: |
           docker build -t ghcr.io/marry-07/tour-frontend:latest ./frontend
-
-    
-      - name: Deploy stack to local Swarm
-        run: |
-          docker stack deploy -c docker-stack.yml tourapp
