@@ -46,75 +46,46 @@
 
 
 
-name: CI/CD (GHCR -> local Docker Swarm)
+name: CI/CD
 
-# Запуск при пуше в ветку main (можешь изменить)
 on:
   push:
-    branches: ["main"]
-
-# Разрешаем workflow пушить пакеты (GHCR)
-permissions:
-  contents: read
-  packages: write
-
-env:
-  BACKEND_IMAGE: ghcr.io/${{ github.marry-07 }}/tour-backend
-  FRONTEND_IMAGE: ghcr.io/${{ github.marry-07 }}/tour-frontend
-  STACK_NAME: tourapp
-  STACK_FILE: docker-stack.yml
+    branches:
+      - main
 
 jobs:
-  # --- CI: собираем и пушим образы в GHCR (в облаке, ubuntu-latest) ---
-  build-and-push:
-    name: Build & Push images to GHCR
-    runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: [self-hosted, local]  # твой локальный runner
     steps:
+     
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Log in to GHCR
+     
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.marry-07 }}
+          username: marry-07
           password: ${{ secrets.GITHUB_TOKEN }}
 
+     
       - name: Build backend image
         run: |
-          docker build -t $BACKEND_IMAGE:latest ./backend
-          docker push $BACKEND_IMAGE:latest
+          docker build -t ghcr.io/marry-07/tour-backend:latest ./backend
 
+     
       - name: Build frontend image
         run: |
-          docker build -t $FRONTEND_IMAGE:latest ./frontend
-          docker push $FRONTEND_IMAGE:latest
+          docker build -t ghcr.io/marry-07/tour-frontend:latest ./frontend
 
-  # --- CD: деплой выполняется на self-hosted runner (твой локальный ПК) ---
-  deploy:
-    name: Deploy to local Docker Swarm (self-hosted runner)
-    needs: build-and-push
-    runs-on: [self-hosted, local]
-    # > runs-on использует label 'local' — при регистрации runner назначь ему label local
-    steps:
-      - name: Checkout repository (needed for stack file)
-        uses: actions/checkout@v4
-
-      - name: Login to GHCR on the runner
+  
+      - name: Push Docker images
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.marry-07 }}" --password-stdin
+          docker push ghcr.io/marry-07/tour-backend:latest
+          docker push ghcr.io/marry-07/tour-frontend:latest
 
-      - name: Pull latest images on the runner
+    
+      - name: Deploy stack to local Swarm
         run: |
-          docker pull $BACKEND_IMAGE:latest
-          docker pull $FRONTEND_IMAGE:latest
-
-      - name: Deploy stack to local swarm
-        run: |
-          # deploy uses docker-stack file from the repository root
-          docker stack deploy -c $STACK_FILE $STACK_NAME
-
-      - name: Show stack services (for logs/verification)
-        run: |
-          docker stack services $STACK_NAME --no-trunc || true
-          docker service ls --filter name=${STACK_NAME}_ || true
+          docker stack deploy -c docker-stack.yml tourapp
